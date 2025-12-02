@@ -1,13 +1,12 @@
 ﻿using BusX.Domain.DTOs;
+using BusX.Domain.Entities;
 
 namespace BusX.Domain.Interfaces;
 
 public interface IBusBookingService
 {
-    Task<List<JourneyDto>> SearchJourneysAsync(string from, string to);
-
+    Task<List<JourneyDto>> SearchJourneysAsync(int fromId, int toId);
     Task<JourneyDetailDto?> GetJourneyDetailsAsync(int journeyId);
-
     Task<TicketResultDto> BuyTicketAsync(CheckoutRequestDto request);
-
+    Task<List<Station>> GetStationsAsync();
 }

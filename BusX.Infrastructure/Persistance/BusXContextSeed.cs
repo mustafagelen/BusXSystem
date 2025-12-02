@@ -23,6 +23,7 @@ public static class BusXContextSeed
         var istId = stations.First(s => s.City == "İstanbul").Id;
         var ankId = stations.First(s => s.City == "Ankara").Id;
         var izmId = stations.First(s => s.City == "İzmir").Id;
+        var antId = stations.First(s => s.City == "Antalya").Id;
 
         var journeys = new List<Journey>
         {
@@ -30,18 +31,27 @@ public static class BusXContextSeed
             {
                 FromStationId = istId,
                 ToStationId = ankId,
-                Departure = DateTime.UtcNow.AddDays(1).AddHours(10),
-                BasePrice = 500,
-                Provider = "ProviderA"
+                Departure = DateTime.UtcNow.AddDays(14).AddHours(10),
+                BasePrice = 650,
+                Provider = "Ist Turizm"
             },
-            
+
             new()
             {
                 FromStationId = istId,
-                ToStationId = izmId,
-                Departure = DateTime.UtcNow.AddDays(1).AddHours(14),
+                ToStationId = ankId,
+                Departure = DateTime.UtcNow.AddDays(14).AddHours(14),
                 BasePrice = 750,
-                Provider = "ProviderB"
+                Provider = "Ankara Yol Turizm"
+            },
+
+            new()
+            {
+                FromStationId = istId,
+                ToStationId = ankId,
+                Departure = DateTime.UtcNow.AddDays(14).AddHours(14),
+                BasePrice = 850,
+                Provider = "Atlas Turizm"
             }
         };
         context.Journeys.AddRange(journeys);
@@ -65,8 +75,8 @@ public static class BusXContextSeed
             if (is2plus1)
             {
                 seats.Add(CreateSeat(journey.Id, row, 1, seatNo++));
-                seats.Add(CreateSeat(journey.Id, row, 2, seatNo++)); 
-                seats.Add(CreateSeat(journey.Id, row, 4, seatNo++)); 
+                seats.Add(CreateSeat(journey.Id, row, 2, seatNo++));
+                seats.Add(CreateSeat(journey.Id, row, 4, seatNo++));
             }
             else
             {

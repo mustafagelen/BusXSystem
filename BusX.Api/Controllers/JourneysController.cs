@@ -14,15 +14,18 @@ public class JourneysController : ControllerBase
         _service = service;
     }
 
-    [HttpGet]
-    public async Task<IActionResult> Search([FromQuery] string from, [FromQuery] string to)
+    [HttpGet("stations")]
+    public async Task<IActionResult> GetStations()
     {
-        if (string.IsNullOrEmpty(from) || string.IsNullOrEmpty(to))
-        {
-            return BadRequest("Lütfen kalkış ve varış şehirlerini giriniz.");
-        }
+        var stations = await _service.GetStationsAsync();
+        return Ok(stations);
+    }
 
-        var results = await _service.SearchJourneysAsync(from, to);
+    [HttpGet]
+    public async Task<IActionResult> Search([FromQuery] int fromId, [FromQuery] int toId)
+    {
+
+        var results = await _service.SearchJourneysAsync(fromId, toId);
         return Ok(results);
     }
 

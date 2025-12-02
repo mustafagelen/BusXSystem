@@ -1,4 +1,5 @@
 ﻿using BusX.Domain.DTOs;
+using BusX.Domain.Entities;
 using BusX.Domain.Interfaces;
 using BusX.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -9,33 +10,28 @@ namespace BusX.Infrastructure.Services;
 public class BusBookingService : IBusBookingService
 {
     private readonly BusXDbContext _context;
-    private readonly IMemoryCache _cache; 
+    private readonly IMemoryCache _cache;
 
     public BusBookingService(BusXDbContext context, IMemoryCache cache)
     {
         _context = context;
         _cache = cache;
     }
-
-    public async Task<List<JourneyDto>> SearchJourneysAsync(string from, string to)
+    public async Task<List<JourneyDto>> SearchJourneysAsync(int fromId, int toId)
     {
-        string cacheKey = $"search_{from.ToLower()}_{to.ToLower()}";
+        string cacheKey = $"search_{fromId}_{toId}";
 
         return await _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
-            var fromStation = await _context.Stations
-                .FirstOrDefaultAsync(s => s.City.ToLower() == from.ToLower());
-            var toStation = await _context.Stations
-                .FirstOrDefaultAsync(s => s.City.ToLower() == to.ToLower());
 
-            if (fromStation == null || toStation == null)
-                return new List<JourneyDto>();
             return await _context.Journeys
                 .AsNoTracking()
-                .Where(j => j.FromStationId == fromStation.Id &&
-                            j.ToStationId == toStation.Id &&
-                            j.Departure > DateTime.UtcNow) 
+                .Where(j => j.FromStationId == fromId &&
+                            j.ToStationId == toId &&
+                            j.Departure > DateTime.UtcNow)
+                .Include(j => j.FromStation)
+                .Include(j => j.ToStation)
                 .Select(j => new JourneyDto
                 {
                     Id = j.Id,
@@ -72,7 +68,7 @@ public class BusBookingService : IBusBookingService
                 Col = s.Col,
                 Status = (int)s.Status,
                 Gender = (int)s.GenderLock,
-                Price = journey.BasePrice 
+                Price = journey.BasePrice
             }).OrderBy(s => s.No).ToList()
         };
     }
@@ -137,5 +133,10 @@ public class BusBookingService : IBusBookingService
             var realError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
             return new TicketResultDto { IsSuccess = false, Message = "Sistem hatası: " + realError };
         }
+    }
+
+    public async Task<List<Station>> GetStationsAsync()
+    {
+        return await _context.Stations.AsNoTracking().ToListAsync();
     }
 }
