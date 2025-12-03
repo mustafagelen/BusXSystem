@@ -41,10 +41,8 @@ public class JourneysController : ControllerBase
         var journeyDetail = await _service.GetJourneyDetailsAsync(id);
 
         if (journeyDetail == null)
-        {
             return NotFound("Aradığınız sefer bulunamadı.");
-        }
-
+     
         return Ok(journeyDetail);
     }
 }

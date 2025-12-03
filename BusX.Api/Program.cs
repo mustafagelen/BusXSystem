@@ -1,7 +1,9 @@
+using BusX.Api.Middlewares;
 using BusX.Domain.Interfaces;
 using BusX.Infrastructure.Persistence;
 using BusX.Infrastructure.Services;
-using BusX.Api.Middlewares;
+using BusX.Infrastructure.Validators;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,19 +14,21 @@ builder.Services.AddDbContext<BusXDbContext>(options =>
 
 builder.Services.AddHealthChecks();
 builder.Services.AddMemoryCache();
+builder.Services.AddLogging();
 
 builder.Services.AddScoped<IBusBookingService, BusBookingService>();
 
-builder.Services.AddRouting(options => options.LowercaseUrls = true); 
+builder.Services.AddValidatorsFromAssemblyContaining<CheckoutRequestValidator>();
+
+builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
-        builder => builder
+        policy => policy
             .AllowAnyOrigin()
             .AllowAnyMethod()
             .AllowAnyHeader());
@@ -44,7 +48,8 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        Console.WriteLine("DB Hatasý: " + ex.Message);
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Veritabaný oluþturulurken/seed edilirken bir hata oluþtu.");
     }
 }
 
@@ -55,9 +60,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
 app.UseCors("AllowAll");
+
 app.UseMiddleware<CorrelationIdMiddleware>();
+
 app.MapControllers();
-app.MapHealthChecks("/health"); 
+
+app.MapHealthChecks("/health");
 
 app.Run();
