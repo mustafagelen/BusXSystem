@@ -8,65 +8,64 @@ public static class BusXContextSeed
 {
     public static async Task SeedAsync(BusXDbContext context)
     {
-        if (await context.Stations.AnyAsync()) return;
-
-        var stations = new List<Station>
+        if (!await context.Stations.AnyAsync())
         {
-            new() { City = "İstanbul", Name = "Esenler Otogarı" },
-            new() { City = "Ankara", Name = "Aşti" },
-            new() { City = "İzmir", Name = "İzotaş" },
-            new() { City = "Antalya", Name = "Antalya Otogarı" }
-        };
-        context.Stations.AddRange(stations);
-        await context.SaveChangesAsync();
+            var stations = new List<Station>
+            {
+                new() { City = "İstanbul", Name = "Esenler Otogarı" },
+                new() { City = "Ankara", Name = "Aşti" },
+                new() { City = "İzmir", Name = "İzotaş" },
+                new() { City = "Antalya", Name = "Antalya Otogarı" },
+                new() { City = "Bursa", Name = "Bursa Terminali" }
+            };
+            context.Stations.AddRange(stations);
+            await context.SaveChangesAsync();
+        }
 
-        var istId = stations.First(s => s.City == "İstanbul").Id;
-        var ankId = stations.First(s => s.City == "Ankara").Id;
-        var izmId = stations.First(s => s.City == "İzmir").Id;
-        var antId = stations.First(s => s.City == "Antalya").Id;
+        if (await context.Journeys.AnyAsync()) return;
 
-        var journeys = new List<Journey>
+        var istId = (await context.Stations.FirstAsync(s => s.City == "İstanbul")).Id;
+        var ankId = (await context.Stations.FirstAsync(s => s.City == "Ankara")).Id;
+
+        var journeys = new List<Journey>();
+
+        var today = DateTime.UtcNow.Date;
+
+        var providers = new[] { "Lüks İstanbul", "Metro VIP", "Kamil Koç", "Pamukkale", "Varan" };
+        var random = new Random();
+
+        for (int i = 0; i < 15; i++)
         {
-            new()
-            {
-                FromStationId = istId,
-                ToStationId = ankId,
-                Departure = DateTime.UtcNow.AddDays(14).AddHours(10),
-                BasePrice = 650,
-                Provider = "Ist Turizm"
-            },
+            int dayOffset = i / 5;
+            int hour = 9 + ((i % 5) * 2);
 
-            new()
-            {
-                FromStationId = istId,
-                ToStationId = ankId,
-                Departure = DateTime.UtcNow.AddDays(14).AddHours(14),
-                BasePrice = 750,
-                Provider = "Ankara Yol Turizm"
-            },
+            var departureTime = today.AddDays(dayOffset).AddHours(hour);
 
-            new()
+            journeys.Add(new Journey
             {
                 FromStationId = istId,
                 ToStationId = ankId,
-                Departure = DateTime.UtcNow.AddDays(14).AddHours(14),
-                BasePrice = 850,
-                Provider = "Atlas Turizm"
-            }
-        };
+                Departure = departureTime,
+                BasePrice = random.Next(500, 900),
+                Provider = providers[i % 5]
+            });
+        }
+
         context.Journeys.AddRange(journeys);
         await context.SaveChangesAsync();
 
+
         foreach (var journey in journeys)
         {
-            await CreateSeatsForJourney(context, journey);
+
+            bool isVip = journey.Provider.Contains("VIP") || journey.Provider.Contains("Lüks");
+            await CreateSeatsForJourney(context, journey, isVip);
         }
     }
 
-    private static async Task CreateSeatsForJourney(BusXDbContext context, Journey journey)
+    private static async Task CreateSeatsForJourney(BusXDbContext context, Journey journey, bool is2plus1)
     {
         var seats = new List<Seat>();
-        bool is2plus1 = journey.Provider == "ProviderA";
         int seatNo = 1;
         int totalRows = 12;
 
@@ -75,7 +74,7 @@ public static class BusXContextSeed
             if (is2plus1)
             {
                 seats.Add(CreateSeat(journey.Id, row, 1, seatNo++));
-                seats.Add(CreateSeat(journey.Id, row, 2, seatNo++));
+                seats.Add(CreateSeat(journey.Id, row, 3, seatNo++));
                 seats.Add(CreateSeat(journey.Id, row, 4, seatNo++));
             }
             else
@@ -87,11 +86,16 @@ public static class BusXContextSeed
             }
         }
 
-        if (seats.Count > 5)
+        var random = new Random();
+        int soldCount = random.Next(2, 5);
+        for (int k = 0; k < soldCount; k++)
         {
-            seats[0].Status = SeatStatus.Sold;
-            seats[1].GenderLock = Gender.Female;
-            seats[1].Status = SeatStatus.Sold;
+            var s = seats[random.Next(seats.Count)];
+            if (s.Status == SeatStatus.Available)
+            {
+                s.Status = SeatStatus.Sold;
+                s.GenderLock = random.Next(2) == 0 ? Gender.Female : Gender.Male;
+            }
         }
 
         context.Seats.AddRange(seats);

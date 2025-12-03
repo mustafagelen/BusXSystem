@@ -17,19 +17,24 @@ public class BusBookingService : IBusBookingService
         _context = context;
         _cache = cache;
     }
-    public async Task<List<JourneyDto>> SearchJourneysAsync(int fromId, int toId)
+    public async Task<List<JourneyDto>> SearchJourneysAsync(int fromId, int toId, DateTime date)
     {
-        string cacheKey = $"search_{fromId}_{toId}";
+        string cacheKey = $"search_{fromId}_{toId}_{date:yyyyMMdd}";
 
         return await _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
 
+            var now = DateTime.UtcNow;
+
             return await _context.Journeys
                 .AsNoTracking()
-                .Where(j => j.FromStationId == fromId &&
-                            j.ToStationId == toId &&
-                            j.Departure > DateTime.UtcNow)
+                .Where(j =>
+                    j.FromStationId == fromId &&
+                    j.ToStationId == toId &&
+                    j.Departure.Date == date.Date &&
+                    j.Departure > now
+                )
                 .Include(j => j.FromStation)
                 .Include(j => j.ToStation)
                 .Select(j => new JourneyDto
@@ -44,7 +49,6 @@ public class BusBookingService : IBusBookingService
                 .ToListAsync();
         }) ?? new List<JourneyDto>();
     }
-
     public async Task<JourneyDetailDto?> GetJourneyDetailsAsync(int journeyId)
     {
         var journey = await _context.Journeys

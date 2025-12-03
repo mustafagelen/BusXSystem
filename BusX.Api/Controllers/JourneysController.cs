@@ -22,12 +22,18 @@ public class JourneysController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> Search([FromQuery] int fromId, [FromQuery] int toId)
+    public async Task<IActionResult> Search([FromQuery] int fromId, [FromQuery] int toId, [FromQuery] DateTime date)
     {
+        var results = await _service.SearchJourneysAsync(fromId, toId, date);
 
-        var results = await _service.SearchJourneysAsync(fromId, toId);
+        if (results == null || !results.Any())
+        {
+            return NotFound(new { message = "Uygun sefer bulunamadı" });
+        }
+
         return Ok(results);
     }
+
 
     [HttpGet("{id}/seats")]
     public async Task<IActionResult> GetSeats(int id)
